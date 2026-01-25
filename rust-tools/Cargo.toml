@@ -1,0 +1,9 @@
+[workspace]
+
+members = [
+    "mouse-logger",
+    "linear-bot",
+    "bezier-bot",
+]
+
+resolver = "2"

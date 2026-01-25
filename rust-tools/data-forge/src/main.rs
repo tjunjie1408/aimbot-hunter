@@ -2,8 +2,6 @@ use anyhow::Result;
 use csv::Writer;
 use rand::Rng;
 use serde::Serialize;
-use std::fs;
-use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 // 配置

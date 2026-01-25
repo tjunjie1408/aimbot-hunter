@@ -3,7 +3,7 @@
 members = [
     "mouse-logger",
     "linear-bot",
-    "bezier-bot",
+    "bezier-bot", "data-forge",
 ]
 
 resolver = "2"

@@ -1,13 +1,13 @@
 use anyhow::Result;
 use colored::*;
-use csv::Writer;
-use rdev::{listen,EventType};
+use csv::WriterBuilder;
+use rdev::{listen, EventType};
 use serde::Serialize;
 use std::fs;
 use std::path::Path;
 use std::sync::mpsc;
 use std::thread;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 #[derive(Debug, Serialize)]
 struct MouseRecord {
@@ -17,17 +17,17 @@ struct MouseRecord {
 }
 
 fn main() -> Result<()> {
-    println!("{}", ">>> SYSTEM KERNEL HOOK INITIATED...".green().bold());
-    println!("{}", ">>> TARGET: MOUSE_INPUT_DEVICE".green());
-    println!("{}", ">>> WAITING FOR DATA STREAM...".green().blink());
-
-    let file_path = "../data/captured.csv";
+    println!("{}", ">>> HIGH-PERFORMANCE KERNEL LOGGER STARTED...".green().bold());
+    println!("{}", ">>> DO NOT CLICK THIS WINDOW! IT WILL PAUSE RECORDING!".red().bold());
     
+    let file_path = "../data/captured.csv";
     if let Some(parent) = Path::new(file_path).parent() {
         fs::create_dir_all(parent)?;
     }
 
-    let mut wtr = Writer::from_path(file_path)?;
+    let mut wtr = WriterBuilder::new()
+        .has_headers(true)
+        .from_path(file_path)?;
 
     let (tx, rx) = mpsc::channel();
 
@@ -37,29 +37,34 @@ fn main() -> Result<()> {
                 EventType::MouseMove { x, y } => {
                     let ts = SystemTime::now()
                         .duration_since(UNIX_EPOCH)
-                        .unwrap()
+                        .unwrap_or(Duration::ZERO)
                         .as_nanos();
-
-                    tx.send(MouseRecord { timestamp: ts, x, y }).unwrap();
+                    
+                    let _ = tx.send(MouseRecord { timestamp: ts, x, y });
                 }
                 _ => {}
             }
         }) {
-            println!("Error: {:?}", error);
+            println!("Listener Error: {:?}", error);
         }
     });
 
-    let mut count = 0;
-    println!("{}", ">>> RECORDING STARTED. PRESS CTRL+C TO STOP.".yellow());
+    println!("{}", ">>> RECORDING... (Use Ctrl+C to stop)".yellow());
+
+    let mut count: u64 = 0;
+    let mut last_print = Instant::now();
 
     for record in rx {
         wtr.serialize(&record)?;
-        
         count += 1;
-        if count % 100 == 0 {
-            wtr.flush()?;
-            print!("\r>>> CAPTURED PACKETS: {} | LAST POS: ({:.1}, {:.1})", 
-                count.to_string().cyan(), record.x, record.y);
+
+        if last_print.elapsed() >= Duration::from_secs(1) {
+            print!("\r>>> STATUS: {} packets captured | Rate: {:.1} Hz", 
+                count.to_string().cyan(), 
+                count as f64 / last_print.elapsed().as_secs_f64()
+            );
+            wtr.flush()?; 
+            last_print = Instant::now();
         }
     }
 

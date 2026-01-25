@@ -1,0 +1,42 @@
+name: Build and Release Tools
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-win:
+    name: Build for Windows
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Build Rust Workspace
+      working-directory: ./rust-tools
+      run: cargo build --release --verbose
+
+    - name: Prepare Artifacts
+      shell: pwsh
+      run: |
+        New-Item -ItemType Directory -Force -Path dist
+        Copy-Item -Path "rust-tools/target/release/mouse-logger.exe" -Destination dist/
+        Copy-Item -Path "rust-tools/target/release/linear-bot.exe" -Destination dist/
+        Copy-Item -Path "rust-tools/target/release/bezier-bot.exe" -Destination dist/
+
+    - name: Zip Tools
+      shell: pwsh
+      run: Compress-Archive -Path "dist/*" -DestinationPath "aimbot-tools-win64.zip"
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: aimbot-tools-win64.zip
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -4,3 +4,6 @@ scikit-learn
 tensorflow
 matplotlib
 seaborn
+tf2onnx
+plotly
+streamlit

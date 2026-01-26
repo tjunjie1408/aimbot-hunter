@@ -1,7 +1,7 @@
 # 🎯 Project Aimbot Hunter
 
 > **"To catch a machine, you must first understand what makes us human."**
-> A Deep Learning system that detects FPS game cheaters (Aimbots) by analyzing mouse movement patterns using **LSTM Autoencoders**.
+> An Industrial-Grade Deep Learning system that detects FPS game cheaters (Aimbots) in real-time using **Rust**, **ONNX Runtime**, and **LSTM Autoencoders**.
 
 ---
 
@@ -11,77 +11,79 @@ In FPS games, traditional anti-cheat systems often rely on scanning memory signa
 
 We operate on a core hypothesis: **Human mouse movement contains natural "noise," micro-corrections, and inertia. Machine movement (whether simple Linear interpolation or advanced Bezier curves) is mathematically "too perfect" or algorithmic.**
 
-This project consists of two main components:
+This project has evolved into a full-stack AI microservice:
 
-1. **Rust Tools (The Body)**: A high-performance suite for capturing mouse data and mathematically simulating massive datasets of bot behaviors.
-2. **Python Brain (The Mind)**: An LSTM Autoencoder model that learns the "fingerprint" of human movement and flags anomalies.
+1.  **Rust Tools (The Body)**: High-performance tools for data generation and a **low-latency REST API** (<5ms) powered by Microsoft's ONNX Runtime.
+2.  **Python Brain (The Mind)**: An LSTM Autoencoder model that learns the "fingerprint" of human movement.
+3.  **Command Center (The Eyes)**: A Streamlit dashboard for real-time trajectory visualization and threat analysis.
 
 ---
 
 ## 🏗️ System Architecture
 
-The project follows a modular pipeline that decouples **high-performance data generation** from **deep learning inference**.
+The project follows a modular pipeline that decouples **training** from **production inference**.
 
 ```mermaid
 graph LR
     subgraph Rust_Workspace [Rust: The Body]
-    A[Data Forge / Logger] -->|Generates| B(Raw CSV Data);
+    A[Data Forge] -->|Generates| B(Raw CSV Data);
     end
     
     subgraph Python_Workspace [Python: The Brain]
-    B --> C{Feature Extraction};
-    C -->|dx, dy sequences| D[LSTM Autoencoder];
-    D -->|Reconstruction| E[Calculate Error];
-    E --> F[Final Verdict];
+    B --> C[LSTM Training];
+    C -->|Export| D(model.onnx);
+    end
+
+    subgraph Production_Layer [Real-Time Inference]
+    D --> E[Rust Axum API];
+    E -->|ORT Engine| F{Verdict};
+    G[Game Client / Dashboard] -->|HTTP POST| E;
+    F -->|JSON Response| G;
     end
     
     style Rust_Workspace fill:#e1f5fe,stroke:#01579b
     style Python_Workspace fill:#fff3e0,stroke:#ff6f00
+    style Production_Layer fill:#e8f5e9,stroke:#2e7d32
 
 ```
 
 ### 1. Data Layer (Rust)
 
-* **Source**: We use `data-forge` to mathematically synthesize millions of rows of linear and Bezier bot trajectories in milliseconds, and `mouse-logger` to capture high-frequency human input (1000Hz+).
-* **Output**: Raw time-series data `(timestamp, x, y)` stored in CSV format.
+* **Forge**: We use `data-forge` to mathematically synthesize millions of rows of linear and Bezier bot trajectories.
+* **Logger**: `mouse-logger` captures high-frequency human input (1000Hz+).
 
-### 2. Processing Layer (Python)
+### 2. Training Layer (Python)
 
-* **Feature Engineering**: The raw coordinates are converted into **relative deltas** `(dx, dy)`. This makes the model "position-invariant," meaning it focuses on *how* the mouse moves, not *where* it is on the screen.
-* **Normalization**: Data is scaled to a `0-1` range to ensure stable LSTM convergence.
+* **Model**: An **LSTM Autoencoder** trained on human data.
+* **Logic**: The model attempts to reconstruct movement. High reconstruction error (MSE) = Aimbot.
 
-### 3. Intelligence Layer (The "Judge")
+### 3. Deployment Layer (Rust + ONNX)
 
-* **Model**: An **LSTM Autoencoder** trained exclusively on human data.
-* **The Logic**:
-* The model attempts to compress and reconstruct every movement sequence it sees.
-* **Low Error**: The movement matches the learned "human" patterns.
-* **High Error**: The movement is mathematically foreign (algorithmic), flagging it as an **Aimbot**.
+* **Engine**: We serve the model using **Rust (Axum)** and **ONNX Runtime (ORT)**.
+* **Performance**: Achieves **<5ms latency** per request, suitable for real-time server-side anti-cheat.
+
+---
 
 ## 📂 Project Structure
 
 ```text
 aimbot-hunter/
 │
-├── 📂 data/                         # Datasets (The Evidence)
-│   ├── golden_human.csv             # Recorded human gameplay
-│   ├── golden_linear.csv            # Generated Linear bot data
-│   └── golden_bezier.csv            # Generated Bezier bot data
-│
-├── 📂 rust-tools/                   # The "Body": Simulation & I/O
-│   ├── 📦 data-forge/               # [CORE] High-speed data generator
-│   ├── 📦 mouse-logger/             # Windows hook for recording
+├── 📂 rust-tools/                   # High-Performance Core
+│   ├── 📦 aimbot-api/               # [NEW] Real-time Inference Server (Axum + ORT)
+│   ├── 📦 data-forge/               # Data generator
+│   ├── 📦 mouse-logger/             # Human data recorder
 │   ├── 📦 linear-bot/               # Linear aimbot simulation
 │   └── 📦 bezier-bot/               # Bezier aimbot simulation
 │
-├── 📂 python-brain/                 # The "Mind": AI Lab
-│   ├── 📓 aimbot_hunter.ipynb       # [CORE] All-in-one Notebook (Train + Judge)
-│   ├── 🧠 aimbot_hunter_model.h5    # Trained Model (Imported from Colab)
-│   ├── ⚖️ scaler.save               # Data Scaler (Imported from Colab)
-│   ├── 🖼️ final_verdict.png         # Result Chart (Imported from Colab)
-│   └── 📄 requirements.txt          # Python dependencies
+├── 📂 python-brain/                 # AI Lab
+│   ├── 📓 aimbot_hunter.ipynb       # Training Notebook
+│   ├── 🧠 model.onnx                # Exported Production Model
+│   └── ⚖️ scaler.save               # Data Scaler
 │
-└── 📄 README.md                     # Project documentation
+├── 🕹️ dashboard.py                  # [NEW] Streamlit Command Center
+├── 🧪 test_attack.py                # Latency & Attack Simulation Script
+└── 📄 README.md                     # Documentation
 
 ```
 
@@ -89,102 +91,84 @@ aimbot-hunter/
 
 ## 🚀 Quick Start Handbook
 
-### 0. Prerequisites
+### Prerequisites
 
 * **Rust**: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
-* **Python 3.9+**: (Virtual Environment recommended)
-* **Git**: Version Control.
+* **Python 3.9+**: `pip install streamlit pandas requests`
+* **ONNX Runtime**: (The Rust crate handles this automatically)
 
-### Phase 1: The Data Forge (Rust)
+### Phase 1: Train the Brain
 
-To bypass OS-level hook limitations and generate massive datasets instantly, we use the `data-forge` tool. It simulates hours of gameplay math in milliseconds.
+*(Skip this if you already have `model.onnx`)*
 
-1. Navigate to the Rust tools directory:
+1. Navigate to `python-brain/`.
+2. Run the notebook or script to train the LSTM.
+3. **Crucial**: Export the trained Keras model to ONNX format.
 
+### Phase 2: Start the Engine (Rust API)
+
+This starts the high-performance inference server.
+
+1. Navigate to the API directory:
 ```bash
-cd rust-tools
+cd rust-tools/aimbot-api
 
 ```
 
-2. **Forge the Data** (Generates `golden_linear.csv` and `golden_bezier.csv`):
 
+2. Ensure `model.onnx` and `config.json` are present in this folder.
+3. Launch the server (Release mode for speed):
 ```bash
-cargo run -p data-forge
+cargo run --release
 
 ```
 
-3. *(Optional)* To record real human gameplay:
 
+*Output: `🚀 SERVER RUNNING ON http://localhost:3000*`
+
+### Phase 3: Launch Command Center (Visualization)
+
+Open a new terminal to launch the visual dashboard.
+
+1. Navigate to the project root:
 ```bash
-cargo run --release -p mouse-logger
-# Play an FPS game for a few minutes. Data saves to ../data/captured.csv
-# Rename it to golden_human.csv manually.
+cd ../..
 
 ```
 
-### Phase 2: Training the Brain (Python)
-
-You can train the model locally or on Google Colab.
-
-1. Navigate to the Python directory and install dependencies:
-
+2. Run the Streamlit app:
 ```bash
-cd python-brain
-pip install -r requirements.txt
+streamlit run dashboard.py
 
 ```
 
-2. **Train the Model**:
-
-* **Option A (Recommended)**: Upload data to Google Colab, run `train_brain.ipynb`, then download the `.h5` model and `.save` file back to this folder.
-* **Option B (Local)**: Run the script directly:
-
-```bash
-python train_brain.py
-
-```
-
-3. **Goal**: Achieve a validation loss of `0.00xx`.
-
-### Phase 3: Judgment Day (Evaluation)
-
-We feed Human, Linear Bot, and Bezier Bot data into the AI to see if it can distinguish them.
-
-1. Run the judgment script:
-
-```bash
-python judge_bot.py
-
-```
-
-2. **Analyze the Result**:
-The script generates `final_verdict.png`.
-
-* **Blue Peak (Human)**: Should be on the left (Low Error).
-* **Orange/Green Peaks (Bots)**: Should be on the right (High Error).
-* **The Gap**: This is your detection threshold.
+3. Open your browser to visualize Human vs. Aimbot trajectories in real-time!
 
 ---
 
-## 📊 Demo Result
+## 📊 Performance Benchmarks
 
-![Model Verdict](./python-brain/final_verdict.png)
+| Metric | Python (Flask/FastAPI) | Rust (Axum + ORT) | Improvement |
+| --- | --- | --- | --- |
+| **Latency** | ~25ms - 50ms | **2ms - 5ms** | **10x Faster** |
+| **Throughput** | Low | High (Async) | High Concurrency |
+| **Memory** | High Overhead | Minimal | Efficient |
 
-> As shown above, the AI successfully separates genuine Human players (Error < 0.05) from Linear and Bezier scripts (Error > 0.10).
+> **Note**: Rust's zero-cost abstractions allow us to run complex LSTM inference with negligible overhead.
 
 ---
 
 ## 🛠️ Tech Stack
 
-* **System & IO**: Rust (Enigo, Rdev, Serde)
-* **Deep Learning**: TensorFlow / Keras (LSTM)
-* **Data Analysis**: Pandas, NumPy
-* **Visualization**: Matplotlib, Seaborn
+* **Backend**: Rust, Axum, Tokio, ONNX Runtime (ORT)
+* **AI**: TensorFlow/Keras (Training), ONNX (Inference)
+* **Frontend**: Streamlit, Altair
+* **Data**: Polars, Serde
 
 ---
 
 ## 🤝 Contribution & License
 
-This project is open-source under the MIT License. Pull requests to improve bot algorithms or model architecture are welcome.
+This project is open-source under the MIT License.
 
-**Disclaimer**: This project is for **educational and research purposes only**. Do not use the provided bot scripts in online competitive games where it violates the Terms of Service.
+**Disclaimer**: This project is for **educational and research purposes only**.

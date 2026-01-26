@@ -168,7 +168,7 @@ The script generates `final_verdict.png`.
 
 ## 📊 Demo Result
 
-*(Example output of `final_verdict.png`)*
+![Model Verdict](./python-brain/final_verdict.png)
 
 > As shown above, the AI successfully separates genuine Human players (Error < 0.05) from Linear and Bezier scripts (Error > 0.10).
 

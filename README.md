@@ -17,6 +17,9 @@ This project has evolved into a full-stack AI microservice:
 2.  **Python Brain (The Mind)**: An LSTM Autoencoder model that learns the "fingerprint" of human movement.
 3.  **Command Center (The Eyes)**: A Streamlit dashboard for real-time trajectory visualization and threat analysis.
 
+![Project Screenshot](python-brain/final_verdict.png)
+
+
 ---
 
 ## 🏗️ System Architecture

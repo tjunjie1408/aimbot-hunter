@@ -16,7 +16,6 @@ class Config:
 
 @dataclass
 class DetectionResult:
-    """标准化的检测结果，类似于 Rust 的 Struct"""
     is_cheater: bool
     anomaly_score: float
     verdict_message: str
